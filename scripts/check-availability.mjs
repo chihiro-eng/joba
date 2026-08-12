@@ -160,6 +160,18 @@ async function main() {
     const rows = await searchLessons(page);
     const targets = rows.filter((r) => TARGET_LESSON_NAMES.includes(r.lessonName));
 
+    console.log(
+      `検索結果: ${rows.length}件（監視対象名: ${TARGET_LESSON_NAMES.join(" / ")}）`
+    );
+    if (targets.length === 0 && rows.length > 0) {
+      const uniqueNames = [...new Set(rows.map((r) => r.lessonName))];
+      console.log(
+        "対象レッスンが1件も見つかりませんでした。レッスン名の表記が違う可能性があります。" +
+          "検索結果に含まれるレッスン名一覧（1つずつ [] で囲んで表示、全角/半角の確認用）:"
+      );
+      console.log(uniqueNames.map((n) => `[${n}]`).join("\n"));
+    }
+
     const prevState = await loadState();
     const nextState = {};
     const newlyAvailable = [];
