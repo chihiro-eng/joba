@@ -1,0 +1,42 @@
+name: crane-lesson-monitor
+
+on:
+  schedule:
+    # JST 6:00-23:59 の間、5分おきに実行 (UTC 21:00-14:59, 深夜0:00-6:00 JSTはサイトのメンテナンス時間帯のため対象外)
+    - cron: "*/5 21-23,0-14 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: crane-lesson-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: node scripts/check-availability.mjs
+        env:
+          CRANE_EMAIL: ${{ secrets.CRANE_EMAIL }}
+          CRANE_PASSWORD: ${{ secrets.CRANE_PASSWORD }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: 空き状況の記録をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/availability-state.json
+          git diff --cached --quiet || git commit -m "chore: update lesson availability state"
+          git push

@@ -1,0 +1,13 @@
+{
+  "name": "joba",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "乗馬クラブクレイン予約サイトのレッスン空き状況を監視し、Discordに通知する",
+  "scripts": {
+    "check": "node scripts/check-availability.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}
