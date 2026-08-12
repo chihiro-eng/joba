@@ -114,6 +114,11 @@ async function searchLessons(page) {
   ]);
 
   return page.evaluate(() => {
+    // スマホ表示用に、各セルの先頭に列見出し（例:「レッスン名」）が
+    // テキストとして埋め込まれているため取り除く
+    const stripLabel = (text, label) =>
+      text.trim().replace(new RegExp("^" + label), "").trim();
+
     const results = [];
     const container =
       document.querySelector("#lesson-list") ||
@@ -130,11 +135,11 @@ async function searchLessons(page) {
           if (tds.length < 5) continue;
           results.push({
             date: currentDate,
-            time: tds[0].textContent.trim(),
-            lessonName: tds[1].textContent.trim(),
-            instructor: tds[2].textContent.trim(),
-            duration: tds[3].textContent.trim(),
-            status: tds[4].textContent.trim(),
+            time: stripLabel(tds[0].textContent, "開始時間"),
+            lessonName: stripLabel(tds[1].textContent, "レッスン名"),
+            instructor: stripLabel(tds[2].textContent, "指導員名"),
+            duration: stripLabel(tds[3].textContent, "所要時間"),
+            status: stripLabel(tds[4].textContent, "空き状況"),
           });
         }
       }
