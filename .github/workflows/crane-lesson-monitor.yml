@@ -33,6 +33,15 @@ jobs:
           CRANE_PASSWORD: ${{ secrets.CRANE_PASSWORD }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
+      - name: エラー時のスクリーンショットを保存
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshot
+          path: error.png
+          if-no-files-found: ignore
+          retention-days: 3
+
       - name: 空き状況の記録をコミット
         run: |
           git config user.name "github-actions[bot]"
