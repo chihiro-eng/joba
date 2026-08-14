@@ -66,13 +66,10 @@ async function notifyDiscord(content) {
 
 function isMaintenanceWindowJst() {
   // サイトは深夜0:00〜6:00の間ログインできないため、この時間帯は実行自体をスキップする
-  const jstHour = Number(
-    new Intl.DateTimeFormat("en-US", {
-      hour: "numeric",
-      hour12: false,
-      timeZone: "Asia/Tokyo",
-    }).format(new Date())
-  );
+  // ※ Intl.DateTimeFormat(hour12:false)は環境によって深夜0時台を「24時」と
+  //   返すことがあり、0時台だけ判定漏れするバグがあったため、
+  //   UTC時刻からの単純な加算でJSTの時を求める（JSTは夏時間がないため常に+9時間で正しい）
+  const jstHour = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCHours();
   return jstHour >= 0 && jstHour < 6;
 }
 
