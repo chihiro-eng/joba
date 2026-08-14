@@ -76,6 +76,22 @@ function isMaintenanceWindowJst() {
   return jstHour >= 0 && jstHour < 6;
 }
 
+async function withRetry(fn, attempts = 2) {
+  let lastErr;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      console.error(`試行${i}/${attempts}が失敗しました: ${err.message}`);
+      if (i < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 async function login(page) {
   await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
 
@@ -157,12 +173,21 @@ async function main() {
   }
 
   const browser = await chromium.launch();
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    userAgent:
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+      "(KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    locale: "ja-JP",
+    viewport: { width: 1280, height: 900 },
+  });
   const page = await context.newPage();
 
   try {
-    await login(page);
-    const rows = await searchLessons(page);
+    // 一時的なネットワーク遅延・タイムアウトに備え、ログイン〜検索は2回まで試行する
+    const rows = await withRetry(async () => {
+      await login(page);
+      return searchLessons(page);
+    });
     const targets = rows.filter((r) => TARGET_LESSON_NAMES.includes(r.lessonName));
 
     console.log(
@@ -206,6 +231,15 @@ async function main() {
     }
   } catch (err) {
     console.error(err);
+    try {
+      console.error(`失敗時のURL: ${page.url()}`);
+      console.error(`失敗時のタイトル: ${await page.title()}`);
+      const screenshotPath = path.join(process.cwd(), "error.png");
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      console.error(`スクリーンショットを保存しました: ${screenshotPath}`);
+    } catch (screenshotErr) {
+      console.error("スクリーンショットの取得にも失敗しました:", screenshotErr);
+    }
     await notifyDiscord(
       `⚠️ レッスン監視でエラーが発生しました: ${err.message}`
     ).catch(() => {});
