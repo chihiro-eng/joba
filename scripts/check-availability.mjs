@@ -21,7 +21,14 @@ const PASSWORD = process.env.CRANE_PASSWORD;
 const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 
 const TARGET_LESSON_NAMES = (
-  process.env.CRANE_TARGET_LESSONS || "ベーシック駈歩ＡＢ,ベーシック駈歩Ｂ"
+  process.env.CRANE_TARGET_LESSONS || "ベーシック駈歩ＡＢ,ベーシック駈歩Ａ"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const EXCLUDED_INSTRUCTORS = (
+  process.env.CRANE_EXCLUDED_INSTRUCTORS || "緒方　洋樹"
 )
   .split(",")
   .map((s) => s.trim())
@@ -185,12 +192,26 @@ async function main() {
       await login(page);
       return searchLessons(page);
     });
-    const targets = rows.filter((r) => TARGET_LESSON_NAMES.includes(r.lessonName));
+    const targets = rows.filter(
+      (r) =>
+        TARGET_LESSON_NAMES.includes(r.lessonName) &&
+        !EXCLUDED_INSTRUCTORS.includes(r.instructor)
+    );
 
     console.log(
-      `検索結果: ${rows.length}件（監視対象名: ${TARGET_LESSON_NAMES.join(" / ")}）`
+      `検索結果: ${rows.length}件（監視対象名: ${TARGET_LESSON_NAMES.join(
+        " / "
+      )} / 除外指導員: ${EXCLUDED_INSTRUCTORS.join(" / ") || "なし"}）`
     );
     if (targets.length === 0 && rows.length > 0) {
+      const nameMatched = rows.filter((r) =>
+        TARGET_LESSON_NAMES.includes(r.lessonName)
+      );
+      if (nameMatched.length > 0) {
+        console.log(
+          `レッスン名は${nameMatched.length}件一致しましたが、全て除外指導員のため対象0件です。`
+        );
+      }
       const uniqueNames = [...new Set(rows.map((r) => r.lessonName))];
       console.log(
         "対象レッスンが1件も見つかりませんでした。レッスン名の表記が違う可能性があります。" +

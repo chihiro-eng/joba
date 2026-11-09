@@ -21,9 +21,11 @@
    | `DISCORD_WEBHOOK_URL` | 通知したいDiscordチャンネルのWebhook URL |
 
 2. 監視対象のレッスン名を変更したい場合は、リポジトリの `Settings > Secrets and variables > Actions > Variables` に
-   `CRANE_TARGET_LESSONS` を追加し、カンマ区切りでレッスン名を指定してください（省略時は `ベーシック駈歩ＡＢ,ベーシック駈歩Ｂ`）。
-   ワークフロー(`.github/workflows/crane-lesson-monitor.yml`)側で `vars.CRANE_TARGET_LESSONS` を
-   `env` に追加すれば反映されます。
+   `CRANE_TARGET_LESSONS` を追加し、カンマ区切りでレッスン名を指定してください（省略時は `ベーシック駈歩ＡＢ,ベーシック駈歩Ａ`）。
+   同様に、通知から除外したい指導員がいる場合は `CRANE_EXCLUDED_INSTRUCTORS` にカンマ区切りで指定してください
+   （省略時は `緒方　洋樹`）。
+   ワークフロー(`.github/workflows/crane-lesson-monitor.yml`)側で `vars.CRANE_TARGET_LESSONS` /
+   `vars.CRANE_EXCLUDED_INSTRUCTORS` を `env` に追加すれば反映されます。
 
 3. `.github/workflows/crane-lesson-monitor.yml` により、JST 6:00〜23:59の間5分おきに自動実行されます
    （0:00〜6:00はサイト側のメンテナンス時間帯のため対象外にしています）。
