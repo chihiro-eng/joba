@@ -34,6 +34,8 @@ const EXCLUDED_INSTRUCTORS = (
   .map((s) => s.trim())
   .filter(Boolean);
 
+const DUMP_ALL = process.env.CRANE_DUMP_ALL === "true";
+
 const STATE_PATH = path.join(process.cwd(), "state", "availability-state.json");
 
 function requireEnv() {
@@ -69,6 +71,27 @@ async function notifyDiscord(content) {
   if (!res.ok) {
     console.error(`Discord通知に失敗しました: ${res.status} ${await res.text()}`);
   }
+}
+
+// Discordの1メッセージ2000文字制限に収まるよう、見出し+各行+末尾のURLを
+// 複数メッセージに分割して順番に送信する
+async function notifyDiscordChunked(header, lines, footer) {
+  const LIMIT = 1900;
+  let chunk = [header];
+  let chunkLen = header.length;
+
+  for (const line of lines) {
+    if (chunkLen + line.length + 1 > LIMIT) {
+      await notifyDiscord(chunk.join("\n"));
+      chunk = [];
+      chunkLen = 0;
+    }
+    chunk.push(line);
+    chunkLen += line.length + 1;
+  }
+
+  chunk.push(footer);
+  await notifyDiscord(chunk.join("\n"));
 }
 
 function isMaintenanceWindowJst() {
@@ -234,7 +257,26 @@ async function main() {
 
     await saveState(nextState);
 
-    if (newlyAvailable.length > 0) {
+    if (DUMP_ALL) {
+      // 手動実行時専用: 新規/既存を問わず、今○になっている対象レッスンを全件通知する
+      const availableNow = targets.filter((r) => r.status === "○");
+      if (availableNow.length > 0) {
+        const lines = availableNow.map(
+          (r) => `・${r.date} ${r.time} ${r.lessonName}（${r.instructor}）`
+        );
+        await notifyDiscordChunked(
+          `📋 現在○（予約可）の対象レッスン一覧（${availableNow.length}件・手動確認分）`,
+          lines,
+          `${BASE}/lesson/search`
+        );
+        console.log(`現在の空き一覧を送信しました: ${availableNow.length}件`);
+      } else {
+        await notifyDiscord(
+          "📋 現在、対象レッスンに空き（○）はありません（手動確認分）"
+        );
+        console.log("現在空きなし（手動確認分として通知）");
+      }
+    } else if (newlyAvailable.length > 0) {
       const lines = newlyAvailable.map(
         (r) => `・${r.date} ${r.time} ${r.lessonName}（${r.instructor}）`
       );

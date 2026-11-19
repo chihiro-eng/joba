@@ -4,7 +4,12 @@ on:
   schedule:
     # JST 6:00-23:59 の間、5分おきに実行 (UTC 21:00-14:59, 深夜0:00-6:00 JSTはサイトのメンテナンス時間帯のため対象外)
     - cron: "*/5 21-23,0-14 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dump_all:
+        description: "今○になっている対象レッスンを全件Discordに通知する（通常の新規検知通知は行わない）"
+        type: boolean
+        default: false
 
 concurrency:
   group: crane-lesson-monitor
@@ -32,6 +37,7 @@ jobs:
           CRANE_EMAIL: ${{ secrets.CRANE_EMAIL }}
           CRANE_PASSWORD: ${{ secrets.CRANE_PASSWORD }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          CRANE_DUMP_ALL: ${{ inputs.dump_all && 'true' || 'false' }}
 
       - name: エラー時のスクリーンショットを保存
         if: failure()
